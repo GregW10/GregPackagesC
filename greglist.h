@@ -241,32 +241,131 @@ list_node_##type *insert_ref_at_node_list_##type(list_##type *list, list_node_##
 list_node_##type *insert_at_node_list_##type(list_##type *list, list_node_##type *node, type value) { \
     return insert_ref_at_node_list_##type(list, node, &value);\
 }
-#define BUBBLE_SORT_RP_FUNC(type) \
-void bubble_sort_rp_list_##type(list_##type *list, int (*compare)(const type *a, const type *b)) { \
+#define BUBBLE_SORT_CP_FUNC(type) \
+void bubble_sort_cp_list_##type(list_##type *list, int (*compare)(const type *a, const type *b)) { \
+    /* Bubble sort algorithm where elements are copied. Should always be used for smaller data types. */ \
     if (!list || !list->num_els || list->num_els == 1)                 \
-        return;                \
-    bool sorted = false;       \
-    list_node_##type *it1 = list->front;                                                     \
-    list_node_##type *it2 = it1->next;                                       \
-    list_node_##type *temp;\
+        return;                   \
+    list_node_##type *it1;         \
+    list_node_##type *it2;         \
+    bool sorted = false;          \
+    size_t maxim = list->num_els - 1;                                                              \
+    size_t counter;               \
+    type temp;\
     while (!sorted) {             \
-        sorted = true;\
-        while (it2) {           \
-            if (compare(&it1->val, &it2->val) > 0) {                            \
-                it1->prev->next = it2;                                                             \
-                it2->next->prev = it1;                                                             \
-                it1->next = it2->next;                                                             \
-                it2->prev = it1->prev;                                                             \
-                it2->next = it1;  \
-                it1->prev = it2;\
-                sorted = false;   \
-                it2 = it1->next;  \
-                it1 = it2->prev;\
-                continue;\
+        sorted = true;            \
+        it1 = list->front;        \
+        it2 = it1->next;          \
+        counter = maxim--;\
+        while (counter --> 0) {             \
+            if (compare(&it1->val, &it2->val) > 0) {                                               \
+                temp = it1->val;  \
+                it1->val = it2->val;                                                               \
+                it2->val = temp;  \
+                sorted = false;\
             }                     \
             it1 = it2;            \
             it2 = it2->next;\
         }\
+    }\
+}
+#define BUBBLE_SORT_RP_FUNC(type) \
+void bubble_sort_rp_list_##type(list_##type *list, int (*compare)(const type *a, const type *b)) { \
+    /* Bubble sort algorithm where pointers are repointed (instead of copying elements) - should be used for when
+    * large data types are being stored and copying would be more expensive than redirecting pointers. */ \
+    /* The algorithm seems long since an initial pass is done over the list to ensure the largest element ends up at the
+    * back, and subsequent passes of the list do not need to check whether this has been dealt with already. */\
+    if (!list || !list->num_els || list->num_els == 1)                 \
+        return;                   \
+    if (list->num_els == 2) {     \
+        if (compare(&list->front->val, &list->back->val) > 0) {                                        \
+            list->back->prev = NULL;                                                               \
+            list->back->next = list->front;                                                        \
+            list->front->prev = list->back;                                                        \
+            list->front->next = NULL;                                                              \
+            list->front = list->back;                                                              \
+            list->back = list->back->next;\
+        }                         \
+        return;\
+    }\
+    bool sorted = true;       \
+    list_node_##type *it1;                                                     \
+    list_node_##type *it2;        \
+    size_t maxim = list->num_els - 3;     \
+    size_t counter;               \
+    it1 = list->front;        \
+    it2 = it1->next;          \
+    if (compare(&it1->val, &it2->val) > 0) {                                                       \
+        it1->next = it2->next;    \
+        it2->next = it1;          \
+        it1->prev = it2;          \
+        it2->prev = NULL;         \
+        it1->next->prev = it1;\
+        list->front = it2;\
+        it2 = it1->next;          \
+        sorted = false;\
+    }                         \
+    else {                    \
+        it1 = it2;            \
+        it2 = it2->next;\
+    }\
+    while (it2->next) {   \
+        if (compare(&it1->val, &it2->val) > 0) {                                               \
+            it2->next->prev = it1;                                                             \
+            it1->prev->next = it2;                                                             \
+            it2->prev = it1->prev;                                                             \
+            it1->prev = it2;  \
+            it1->next = it2->next;                                                             \
+            it2->next = it1;  \
+            it2 = it1->next;      \
+            sorted = false;\
+            continue;\
+        }                     \
+        it1 = it2;            \
+        it2 = it2->next;\
+    }                             \
+    if (compare(&it1->val, &it2->val) > 0) {                                                       \
+        it1->next = NULL;         \
+        it2->next = it1;          \
+        it2->prev = it1->prev;    \
+        it1->prev = it2;          \
+        it2->prev->next = it2;    \
+        list->back = it1;\
+    }\
+    while (!sorted) {             \
+        sorted = true;            \
+        it1 = list->front;        \
+        it2 = it1->next;          \
+        counter = maxim--;\
+        if (compare(&it1->val, &it2->val) > 0) {                                                       \
+            it1->next = it2->next;    \
+            it2->next = it1;          \
+            it1->prev = it2;          \
+            it2->prev = NULL;         \
+            it1->next->prev = it1;\
+            list->front = it2;\
+            it2 = it1->next;\
+        }                         \
+        else {                    \
+            it1 = it2;            \
+            it2 = it2->next;\
+        }\
+        while (counter --> 0) {   \
+            /*printf("counter: %zu, it2->next: %p\n", counter, it2->next);*/\
+            if (compare(&it1->val, &it2->val) > 0) {                                               \
+                it2->next->prev = it1;                                                             \
+                it1->prev->next = it2;                                                             \
+                it2->prev = it1->prev;                                                             \
+                it1->prev = it2;  \
+                it1->next = it2->next;                                                             \
+                it2->next = it1;  \
+                sorted = false;   \
+                it2 = it1->next;\
+                continue;\
+            }                     \
+            it1 = it2;            \
+            it2 = it2->next;\
+        }                         \
     }\
 }
 #define CLEAR_LIST_FUNC(type) \
@@ -310,7 +409,7 @@ size_t print_list_##type(const list_##type *list, const char *format) { \
     list_node_##type *it = list->front;         \
     while (it) {        \
         printf(format, it->val);                                        \
-        fputs(", ", stdout);\
+        fputs(", ", stdout);  \
         it = it->next;\
     }                         \
     puts("\b\b]");        \
@@ -338,6 +437,7 @@ size_t list_size_##type(list_##type *list) { \
 #define clear_list(type) clear_list_##type
 #define for_each(type) for_each_list_##type
 #define bubble_sort_rp(type) bubble_sort_rp_list_##type
+#define bubble_sort_cp(type) bubble_sort_cp_list_##type
 #define list_size(type) list_size_##type
 #define print_list(type) print_list_##type
 
@@ -360,7 +460,8 @@ INSERT_AT_NODE_FUNC(type)                     \
 CLEAR_LIST_FUNC(type)                          \
 FOR_EACH_FUNC(type)                             \
 BUBBLE_SORT_RP_FUNC(type)                        \
-SIZE_FUNC(type)                                   \
+BUBBLE_SORT_CP_FUNC(type)                         \
+SIZE_FUNC(type)                                    \
 PRINT_LIST_FUNC(type)
 
 #define LIST(type) list_##type
